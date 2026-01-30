@@ -8,7 +8,6 @@ const { Pool } = require('pg');
 // --- SECURITY PACKAGES ---
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const xss = require('xss-clean');
 const hpp = require('hpp');
 
 const app = express();
@@ -36,8 +35,6 @@ app.use('/api', limiter);
 // 3. Prevent Parameter Pollution
 app.use(hpp());
 
-// 4. Sanitize Data (XSS Protection)
-app.use(xss());
 
 // 5. Strict CORS (Allow only YOUR Frontend)
 const allowedOrigins = [
@@ -349,5 +346,6 @@ app.get('/api/holidays/upcoming', async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     try { const {rows} = await pool.query("SELECT * FROM holidays WHERE date >= $1 ORDER BY date ASC", [today]); res.json({ data: rows }); } catch(e){ res.status(500).json(e); }
 });
+
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
