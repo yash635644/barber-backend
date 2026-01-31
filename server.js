@@ -39,8 +39,7 @@ app.use(hpp());
 // 5. Strict CORS (Allow only YOUR Frontend)
 const allowedOrigins = [
     'http://localhost:5173', // Local Dev
-    // ADD YOUR VERCEL URL HERE AFTER DEPLOYING FRONTEND
-    // e.g., 'https://barber-frontend.vercel.app' 
+    'https://vogue-studio-topaz.vercel.app' // <--- ADDED YOUR VERCEL URL HERE
 ];
 
 app.use(cors({
