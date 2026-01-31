@@ -11,6 +11,12 @@ const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 
 const app = express();
+
+// =============================================
+// ✅ FIX: TRUST PROXY (Required for Render)
+// =============================================
+app.set('trust proxy', 1); 
+
 const PORT = process.env.PORT || 3000;
 
 // --- DATABASE CONNECTION (SUPABASE) ---
@@ -92,6 +98,8 @@ app.get('/', (req, res) => res.send('<h1>Barber Shop Backend is Secure & Running
 app.get('/api/shop', async (req, res) => {
     try {
         const { rows } = await pool.query('SELECT * FROM shops WHERE id = 1');
+        // Safety Check: If DB is empty, prevent crash
+        if (rows.length === 0) return res.status(404).json({ error: "Shop data not found. Please run SQL script." });
         res.json({ data: rows[0] });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
