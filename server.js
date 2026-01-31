@@ -13,7 +13,7 @@ app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // =============================================
-// ✅ DB CONNECTION (Standard)
+// ✅ DB CONNECTION
 // =============================================
 // We rely on the correct DATABASE_URL from Supabase Settings -> Connection Pooling
 const pool = new Pool({
@@ -91,6 +91,20 @@ const sendWhatsApp = async (to, body) => {
 };
 
 app.get('/', (req, res) => res.send('<h1>Backend Online 🚀</h1>'));
+
+// =============================================
+// ❤️ DATABASE HEARTBEAT (New Route)
+// =============================================
+// This route touches the DB to prevent Supabase 7-day pause
+app.get('/api/health', async (req, res) => {
+    try {
+        await pool.query('SELECT 1'); // Tiny query to keep DB awake
+        res.send('Database Active & Healthy');
+    } catch (error) {
+        console.error("Health Check Failed:", error.message);
+        res.status(500).send('Database Error');
+    }
+});
 
 // --- ROUTES ---
 
@@ -302,23 +316,24 @@ app.get('/api/holidays/upcoming', async (req, res) => {
 });
 
 // =============================================
-// ⏰ KEEP-ALIVE SYSTEM (Prevents Render Sleep)
+// ⏰ ULTIMATE KEEP-ALIVE (Render + Supabase)
 // =============================================
-// Pings the server every 14 minutes to keep it active 24/7 (Render sleeps after 15m)
 const SERVER_URL = "https://barber-api-rxn2.onrender.com"; 
 
 const startKeepAlive = () => {
     setInterval(async () => {
         try {
-            await axios.get(`${SERVER_URL}/`);
-            console.log("⏰ Keep-Alive: Ping Successful");
+            // Pings the new /api/health route which runs 'SELECT 1'
+            // This keeps BOTH Render (HTTP) and Supabase (DB) awake.
+            await axios.get(`${SERVER_URL}/api/health`);
+            console.log("⏰ Keep-Alive: DB & Server Checked Successfully");
         } catch (error) {
-            console.error("⏰ Keep-Alive: Ping Failed", error.message);
+            console.error("⏰ Keep-Alive: Check Failed", error.message);
         }
     }, 14 * 60 * 1000); // 14 Minutes
 };
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    startKeepAlive(); // Start the heartbeat
+    startKeepAlive();
 });
