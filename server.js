@@ -1,4 +1,12 @@
 require('dotenv').config();
+// =============================================
+// ✅ FIX: FORCE IPv4 (Fixes ENETUNREACH Error)
+// =============================================
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -11,10 +19,6 @@ const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 
 const app = express();
-
-// =============================================
-// ✅ FIX: TRUST PROXY (Required for Render)
-// =============================================
 app.set('trust proxy', 1); 
 
 const PORT = process.env.PORT || 3000;
@@ -23,13 +27,13 @@ const PORT = process.env.PORT || 3000;
 // 🔍 DATABASE CONNECTION DEBUGGER
 // =============================================
 console.log("---------------------------------------------");
-console.log("🚀 STARTING SERVER...");
+console.log("🚀 STARTING SERVER (IPv4 Mode)...");
 console.log("📡 Connecting to Database...");
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }, // Required for Supabase/Render
-    connectionTimeoutMillis: 5000 // Fail fast if connection hangs
+    ssl: { rejectUnauthorized: false }, 
+    connectionTimeoutMillis: 10000 // Increased timeout to 10s
 });
 
 // Test connection immediately on startup
@@ -37,7 +41,6 @@ pool.connect((err, client, release) => {
     if (err) {
         console.error("❌ FATAL DATABASE ERROR: Could not connect!");
         console.error("👉 REASON:", err.message);
-        console.error("💡 HINT: Check your Render Environment Variable 'DATABASE_URL'. The password might be wrong.");
     } else {
         console.log("✅ DATABASE CONNECTED SUCCESSFULLY!");
         release();
@@ -70,17 +73,9 @@ const allowedOrigins = [
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
+        if (allowedOrigins.some(o => origin.startsWith(o))) return callback(null, true);
+        if (origin.includes('.vercel.app')) return callback(null, true);
         
-        // 1. Check strict list
-        if (allowedOrigins.some(o => origin.startsWith(o))) {
-            return callback(null, true);
-        }
-        
-        // 2. Allow all Vercel previews (Fixes CORS on preview links)
-        if (origin.includes('.vercel.app')) {
-            return callback(null, true);
-        }
-
         console.log("⚠️ Blocked by CORS:", origin);
         callback(new Error('Not allowed by CORS'));
     }
@@ -114,34 +109,24 @@ const sendWhatsApp = async (to, body) => {
 app.get('/', (req, res) => res.send('<h1>Barber Shop Backend is Secure & Running! 🚀</h1>'));
 
 // ==========================================
-// 1. PUBLIC API (Shops & Services)
+// 1. PUBLIC API
 // ==========================================
 
 app.get('/api/shop', async (req, res) => {
     try {
         const { rows } = await pool.query('SELECT * FROM shops WHERE id = 1');
-        if (rows.length === 0) {
-            console.error("❌ ERROR: Shop table is empty. Did you run the SQL script?");
-            return res.status(404).json({ error: "Shop data not found. Please run SQL script." });
-        }
+        if (rows.length === 0) return res.status(404).json({ error: "Shop data not found." });
         res.json({ data: rows[0] });
-    } catch (err) { 
-        console.error("❌ API ERROR (Shop):", err.message);
-        res.status(500).json({ error: err.message }); 
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/services', async (req, res) => {
     try {
         const { rows } = await pool.query('SELECT * FROM services ORDER BY id ASC');
         res.json({ data: rows });
-    } catch (err) { 
-        console.error("❌ API ERROR (Services):", err.message);
-        res.status(500).json({ error: err.message }); 
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- CREATE BOOKING (CLIENT) ---
 app.post('/api/bookings', async (req, res) => {
     const { name, phone, service, date, time } = req.body;
     const dateTime = `${date} at ${time}`;
@@ -160,14 +145,12 @@ app.post('/api/bookings', async (req, res) => {
         if(process.env.OWNER_PHONE_NUMBER) await sendWhatsApp(process.env.OWNER_PHONE_NUMBER, ownerMsg);
 
         res.json({ message: "Booking sent!", id: insertRes.rows[0].id });
-
     } catch (err) {
         console.error("❌ API ERROR (Booking):", err.message);
         res.status(500).json({ error: "Database error" });
     }
 });
 
-// --- CHECK SLOTS ---
 app.get('/api/slots', async (req, res) => {
     const { date } = req.query; 
     if (!date) return res.status(400).json({ error: "Date required" });
@@ -183,7 +166,7 @@ app.get('/api/slots', async (req, res) => {
 });
 
 // ==========================================
-// 2. ADMIN API (Protected)
+// 2. ADMIN API
 // ==========================================
 
 app.post('/api/admin/login', (req, res) => {
