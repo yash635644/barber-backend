@@ -48,7 +48,8 @@ app.use(hpp());
 const allowedOrigins = [
     'http://localhost:5173', 
     'https://vogue-studio-topaz.vercel.app',  // Your Client Site
-    'https://barber-admin-navy.vercel.app'    // <--- ✅ ADDED YOUR ADMIN SITE HERE
+    'https://barber-admin-navy.vercel.app' // <--- ✅ ADDED YOUR ADMIN SITE HERE
+    'https://vogue-studio-topaz.vercel.app/' // ADD THIS (With Slash) JUST IN CASE
 ];
 
 app.use(cors({
@@ -361,3 +362,4 @@ app.get('/api/holidays/upcoming', async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
