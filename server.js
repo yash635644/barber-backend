@@ -57,11 +57,23 @@ app.use(cors({
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use('/api', limiter);
 
-// --- WHATSAPP HELPER ---
+// =============================================
+// ✅ WHATSAPP HELPER (SMART VERSION - FIXES 400 ERROR)
+// =============================================
 const sendWhatsApp = async (to, body) => {
     if (!to || !process.env.META_PHONE_ID) return;
     try {
+        // 1. Remove all non-numbers (spaces, +, -)
         let formattedNum = to.toString().replace(/\D/g, ''); 
+
+        // 2. Auto-Add India Country Code (91) if missing
+        // If number is exactly 10 digits (e.g. 9876543210), make it 919876543210
+        if (formattedNum.length === 10) {
+            formattedNum = '91' + formattedNum;
+        }
+
+        console.log(`📤 Sending WhatsApp to: ${formattedNum}`); // Debug Log
+
         const url = `https://graph.facebook.com/v17.0/${process.env.META_PHONE_ID}/messages`;
         await axios.post(url, {
             messaging_product: "whatsapp",
@@ -71,8 +83,11 @@ const sendWhatsApp = async (to, body) => {
         }, {
             headers: { Authorization: `Bearer ${process.env.META_TOKEN}`, "Content-Type": "application/json" }
         });
-        console.log(`✅ WhatsApp sent`);
-    } catch (error) { console.error("❌ WhatsApp Error:", error.message); }
+        console.log(`✅ WhatsApp sent successfully!`);
+    } catch (error) { 
+        // Print the EXACT error message from Meta so we know why it failed
+        console.error("❌ WhatsApp Error:", error.response ? error.response.data : error.message); 
+    }
 };
 
 app.get('/', (req, res) => res.send('<h1>Backend Online 🚀</h1>'));
