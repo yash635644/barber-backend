@@ -43,13 +43,13 @@ app.use(hpp());
 
 
 // =============================================
-// ✅ FINAL STEP: ALLOW YOUR ADMIN PANEL
+// ✅ FINAL STEP: ALLOW ALL YOUR SITES
 // =============================================
 const allowedOrigins = [
     'http://localhost:5173', 
-    'https://vogue-studio-topaz.vercel.app',  // Your Client Site
-    'https://barber-admin-navy.vercel.app' // <--- ✅ ADDED YOUR ADMIN SITE HERE
-    'https://vogue-studio-topaz.vercel.app/' // ADD THIS (With Slash) JUST IN CASE
+    'https://vogue-studio-topaz.vercel.app',   // Your Client Site (No Slash)
+    'https://barber-admin-navy.vercel.app',     // Your Admin Site
+    'https://vogue-studio-topaz.vercel.app/'    // Your Client Site (With Slash - just in case)
 ];
 
 app.use(cors({
@@ -134,7 +134,6 @@ app.post('/api/bookings', async (req, res) => {
         );
 
         // 3. Notify Owner (Admin) with detailed link
-        // ✅ UPDATED LINK TO LIVE ADMIN PANEL
         const adminUrl = process.env.ADMIN_PANEL_URL || 'https://barber-admin-navy.vercel.app'; 
         
         const ownerMsg = `🔔 *New Booking Request!*
@@ -362,4 +361,3 @@ app.get('/api/holidays/upcoming', async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-
